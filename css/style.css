@@ -1,0 +1,21 @@
+/* Mobile-first styles for Last Order multiplayer demo */
+:root{
+  --bg:#0b1220;--card:#0f1724;--accent:#ff7b00;--muted:#9aa6b2;--text:#e6eef6
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:var(--text);background:linear-gradient(180deg,#071023 0%, #07182a 100%);-webkit-font-smoothing:antialiased}
+.container{max-width:640px;margin:0 auto;padding:18px}
+header{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+h1{margin:0;font-size:1.6rem}
+.muted{color:var(--muted)}
+.card{background:var(--card);padding:14px;border-radius:12px;margin-bottom:12px;box-shadow:0 4px 18px rgba(2,6,23,0.6)}
+label{display:block;margin-bottom:8px}
+input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);margin-top:6px}
+button{display:inline-block;padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#07202a;font-weight:600}
+.hidden{display:none}
+#players-list{list-style:none;padding:0;margin:8px 0}
+#players-list li{padding:8px;background:rgba(255,255,255,0.02);border-radius:8px;margin-bottom:6px;display:flex;justify-content:space-between}
+#qr{max-width:160px;background:#fff;padding:6px;border-radius:8px}
+footer.small{font-size:12px;text-align:center;margin-top:18px;color:var(--muted)}
+@media(min-width:720px){.container{padding:32px}h1{font-size:2rem}}
