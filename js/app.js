@@ -1,4 +1,4 @@
-// Replace js/app.js with the following content
+// Replace js/app.js with enhanced error handling for DB operations
 import { supabase } from './supabase.js';
 
 // Utils
@@ -47,42 +47,75 @@ async function createGame(name) {
   const code = generateCode();
   const gameRow = { code, host_name: name, status: 'open' };
   if (authUserId) gameRow.host_user = authUserId;
-  await supabase.from('games').insert([gameRow]);
+
+  // Insert game and check for DB errors
+  const { data: gData, error: gErr } = await supabase.from('games').insert([gameRow]).select();
+  if (gErr) {
+    console.error('create game error', gErr);
+    throw new Error(gErr.message || 'Unable to create game');
+  }
+
   // insert host as player; include client id so we can identify locally
   const playerRow = { game: code, name, is_host: true, client_id: clientPlayerId };
   if (authUserId) playerRow.user_id = authUserId;
-  await supabase.from('players').insert([playerRow]);
+  const { data: pData, error: pErr } = await supabase.from('players').insert([playerRow]).select();
+  if (pErr) {
+    console.error('insert player error', pErr);
+    // rollback game to avoid orphaned games
+    try { await supabase.from('games').delete().eq('code', code); } catch (e) { console.warn('rollback delete failed', e); }
+    throw new Error(pErr.message || 'Unable to add host player');
+  }
+
   return code;
 }
 
 async function joinGame(code, name) {
   // check game exists and is open
-  const { data: game } = await supabase.from('games').select('*').eq('code', code).single();
+  const { data: game, error: gErr } = await supabase.from('games').select('*').eq('code', code).single();
+  if (gErr) {
+    console.error('joinGame lookup error', gErr);
+    throw new Error(gErr.message || 'Game lookup failed');
+  }
   if (!game) throw new Error('Game not found');
   if (game.status === 'started') throw new Error('Game already started');
+
   const playerRow = { game: code, name, is_host: false, client_id: clientPlayerId };
   if (authUserId) playerRow.user_id = authUserId;
-  await supabase.from('players').insert([playerRow]);
+  const { data: pData, error: pErr } = await supabase.from('players').insert([playerRow]).select();
+  if (pErr) {
+    console.error('joinGame insert player error', pErr);
+    throw new Error(pErr.message || 'Unable to join game');
+  }
   return game;
 }
 
 async function startGameFlow(code) {
   // update games.status
-  await supabase.from('games').update({ status: 'started' }).eq('code', code);
+  const { error } = await supabase.from('games').update({ status: 'started' }).eq('code', code);
+  if (error) {
+    console.error('startGameFlow update error', error);
+    throw new Error(error.message || 'Failed to start game');
+  }
   // create round 1
   await createRound(code, 1);
 }
 
 async function createRound(gameCode, roundNumber) {
   // insert round record
-  const { error: rErr } = await supabase.from('rounds').insert([{ game: gameCode, round_number: roundNumber, status: 'open' }]);
-  if (rErr) console.error('create round error', rErr);
+  const { data: rData, error: rErr } = await supabase.from('rounds').insert([{ game: gameCode, round_number: roundNumber, status: 'open' }]).select();
+  if (rErr) {
+    console.error('create round error', rErr);
+    throw new Error(rErr.message || 'Failed to create round');
+  }
 
   // generate questions for this round and insert them
   const questions = generateQuestionsForRound(gameCode, roundNumber);
   // questions need fields: game, round_number, type, text, options (JSON)
-  const { error: qErr } = await supabase.from('questions').insert(questions);
-  if (qErr) console.error('insert questions error', qErr);
+  const { data: qData, error: qErr } = await supabase.from('questions').insert(questions).select();
+  if (qErr) {
+    console.error('insert questions error', qErr);
+    throw new Error(qErr.message || 'Failed to insert questions');
+  }
 
   // set currentRound locally if this client is viewing same game
   if (currentGame === gameCode) {
@@ -378,7 +411,7 @@ $('#create-game').addEventListener('click', async () => {
     await refreshPlayersList();
   } catch (err) {
     console.error(err);
-    alert('Create game failed');
+    alert(err.message || 'Create game failed');
   } finally {
     $('#create-game').disabled = false;
   }
@@ -418,7 +451,7 @@ $('#start-game').addEventListener('click', async () => {
     showGameView();
   } catch (err) {
     console.error(err);
-    alert('Failed to start game');
+    alert(err.message || 'Failed to start game');
   } finally {
     $('#start-game').disabled = false;
   }
@@ -438,7 +471,7 @@ $('#next-round').addEventListener('click', async () => {
     // auto-set currentRound locally when DB notifies
   } catch (err) {
     console.error(err);
-    alert('Failed to create next round');
+    alert(err.message || 'Failed to create next round');
   } finally {
     $('#next-round').disabled = false;
   }
