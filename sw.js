@@ -1,2 +1,2 @@
-// Service worker intentionally removed for online-only deployment.
-// This file is retained for repository history but is not registered by the site.
+// sw.js retired: Service worker has been unregistered by the site. File retained as a stub for history.
+// If you want this file deleted from the repository, confirm and I will remove it.

@@ -83,5 +83,27 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/app.js"></script>
+
+  <!-- TEMPORARY (one-time) cleanup script: unregister existing service workers and clear caches
+       This ensures previously-installed clients do not keep a service worker that could cache stale content.
+       The script removes itself after execution. Keep this in place for a day, then it can be removed. -->
+  <script>
+    (function(){
+      try {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs){
+            regs.forEach(function(r){ try { r.unregister(); } catch(e){} });
+          }).catch(function(){});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function(keys){
+            keys.forEach(function(k){ try { caches.delete(k); } catch(e){} });
+          }).catch(function(){});
+        }
+      } catch(e) {}
+      // remove this script tag after running
+      try { if (document.currentScript) document.currentScript.remove(); } catch(e){}
+    })();
+  </script>
 </body>
 </html>

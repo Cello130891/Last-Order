@@ -1,3 +1,3 @@
 {
-  "note": "PWA disabled — manifest retained for history. The web app now runs as an online-only static site; manifest is no longer referenced in index.html."
+  "note": "manifest.json removed from site references. File kept in repo history/stub for now. If you want it deleted completely, request removal and I will delete it."
 }

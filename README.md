@@ -1,13 +1,5 @@
-# Last-Order — Online-only deployment
+Removed PWA assets (sw.js + manifest.json) from site references and added a temporary cleanup script to index.html that unregisters service workers and clears caches on client load. 
 
-This repository has been adjusted for online-only usage (PWA features disabled).
-
-What I changed:
-- Removed the <link rel="manifest"> reference from index.html.
-- Removed the service worker registration script from index.html.
-- Replaced sw.js with a small stub and replaced manifest.json with a note JSON (both files retained for history).
-
-Why:
-- You requested a pure online experience (no offline caching). Removing PWA registration prevents the service worker from intercepting network requests and avoids stale cached content.
-
-If you want me to fully remove the sw.js and manifest.json files from the repository (delete), say so and I will remove them.
+Next steps recommended:
+- Keep the temporary cleanup script live for at least 24 hours to ensure returning/installed clients unregister their SWs.
+- After that, I can remove the temporary script and permanently delete sw.js and manifest.json from the repository if you want.
