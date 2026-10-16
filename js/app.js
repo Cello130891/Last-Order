@@ -17,6 +17,18 @@ if (!clientPlayerId) {
   localStorage.setItem(CLIENT_PLAYER_KEY, clientPlayerId);
 }
 
+// Auth-aware user id (if an anonymous auth session exists)
+let authUserId = null;
+async function initAuth() {
+  try {
+    const { data } = await supabase.auth.getUser();
+    authUserId = data?.user?.id ?? null;
+  } catch (e) {
+    console.warn('Could not get auth user (anonymous not signed in):', e.message || e);
+    authUserId = null;
+  }
+}
+
 // App state
 let myName = null;
 let isHost = false;
@@ -33,9 +45,13 @@ const ROTATION = ['multiple_choice', 'true_false', 'ranking', 'comparison'];
 
 async function createGame(name) {
   const code = generateCode();
-  await supabase.from('games').insert([{ code, host_name: name, status: 'open' }]);
+  const gameRow = { code, host_name: name, status: 'open' };
+  if (authUserId) gameRow.host_user = authUserId;
+  await supabase.from('games').insert([gameRow]);
   // insert host as player; include client id so we can identify locally
-  await supabase.from('players').insert([{ game: code, name, is_host: true, client_id: clientPlayerId }]);
+  const playerRow = { game: code, name, is_host: true, client_id: clientPlayerId };
+  if (authUserId) playerRow.user_id = authUserId;
+  await supabase.from('players').insert([playerRow]);
   return code;
 }
 
@@ -44,7 +60,9 @@ async function joinGame(code, name) {
   const { data: game } = await supabase.from('games').select('*').eq('code', code).single();
   if (!game) throw new Error('Game not found');
   if (game.status === 'started') throw new Error('Game already started');
-  await supabase.from('players').insert([{ game: code, name, is_host: false, client_id: clientPlayerId }]);
+  const playerRow = { game: code, name, is_host: false, client_id: clientPlayerId };
+  if (authUserId) playerRow.user_id = authUserId;
+  await supabase.from('players').insert([playerRow]);
   return game;
 }
 
@@ -309,6 +327,7 @@ async function submitAnswer(question, answerValue) {
     client_id: clientPlayerId,
     answer: typeof answerValue === 'object' ? answerValue : String(answerValue)
   };
+  if (authUserId) payload.user_id = authUserId;
   const { error } = await supabase.from('answers').insert([payload]);
   if (error) {
     console.error('submit answer error', error);
@@ -426,7 +445,8 @@ $('#next-round').addEventListener('click', async () => {
 });
 
 // Auto-fill join-code if query param exists
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+  await initAuth();
   const params = new URLSearchParams(location.search);
   const code = (params.get('code') || '').toUpperCase();
   if (code && code.length === 6) {
